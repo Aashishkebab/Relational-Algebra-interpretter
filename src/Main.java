@@ -23,7 +23,9 @@ public class Main{
         }
     }
 
-    private static void executeQuery(final String query){
+    private static String executeQuery(final String query){
 
+
+        // First determine whether the first item is an operator or table name
     }
 }
