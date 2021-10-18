@@ -40,11 +40,16 @@ public class Main{
      * @return A DataTable with the query executed on just the portion passed in as a parameter, which will only occur when there is only one word (being the table name).
      * @throws DataFormatException
      */
-    @SuppressWarnings("DuplicateExpressions")
+    @SuppressWarnings({"DuplicateExpressions", "DuplicatedCode"})
     public static DataTable executeQuery(String query) throws DataFormatException, FileNotFoundException{
         query = query.trim();
         if(query.isBlank()){
             throw new IllegalArgumentException("The query cannot be blank.");
+        }
+        String firstLetter = query.substring(0, 1);
+        if(firstLetter.equals(MINUS) || firstLetter.equals(UNION) || firstLetter.equals(JOIN) || firstLetter.equals(CROSS_PRODUCT)){
+            //noinspection GrazieInspection
+            throw new IllegalArgumentException("The first item cannot be a two-table operator. It can't be " + firstLetter + ", which is what you put.");
         }
 
         //noinspection SwitchStatementWithoutDefaultBranch
@@ -52,22 +57,44 @@ public class Main{
             case SELECT:
                 return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf("}") + 1))).selectWhere(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)));
             case PROJECT:
-                return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf(query.lastIndexOf("}") + 1)))).project(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)).split(","));
+                return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf("}") + 1))).project(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)).split(","));
         }
 
-        int firstOperator = Math.min(Math.min(Math.min(Math.min(query.indexOf(MINUS), query.indexOf(UNION)), query.indexOf(INTERSECT)), query.indexOf(JOIN)), query.indexOf(CROSS_PRODUCT)); // This is atrocious
+        int firstOperator = -1;
+        String firstOperatorName = null;
 
-        if(firstOperator >= 0){
+        if(query.contains(MINUS)){
+            firstOperator = query.indexOf(MINUS);
+            firstOperatorName = MINUS;
+        }
+        if(query.contains(UNION) && (query.indexOf(UNION) < firstOperator)){
+            firstOperator = query.indexOf(UNION);
+            firstOperatorName = UNION;
+        }
+        if(query.contains(JOIN) && (query.indexOf(JOIN) < firstOperator)){
+            firstOperator = query.indexOf(JOIN);
+            firstOperatorName = JOIN;
+        }
+        if(query.contains(CROSS_PRODUCT) && (query.indexOf(CROSS_PRODUCT) < firstOperator)){
+            firstOperator = query.indexOf(CROSS_PRODUCT);
+            firstOperatorName = CROSS_PRODUCT;
+        }
+        if(query.contains(INTERSECT) && (query.indexOf(INTERSECT) < firstOperator)){
+            firstOperator = query.indexOf(INTERSECT);
+            firstOperatorName = INTERSECT;
+        }
+
+        if(firstOperatorName != null){
             String beforeOperator = query.substring(0, firstOperator);
             String afterOperator = query.substring(firstOperator + 1);
 
             // Since “INTE“ is not a single character, it won't work in the switch above.
-            return query.startsWith(INTERSECT, firstOperator) ? executeQuery(beforeOperator).intersectWith(executeQuery(afterOperator)) : switch(query.substring(firstOperator, firstOperator + 1)){
+            return switch(firstOperatorName){
                 case MINUS -> executeQuery(beforeOperator).minus(executeQuery(afterOperator));
                 case UNION -> executeQuery(beforeOperator).unionWith(executeQuery(afterOperator));
                 case JOIN -> executeQuery(beforeOperator).joinWith(executeQuery(afterOperator));
+                case INTERSECT -> executeQuery(beforeOperator).intersectWith(executeQuery(afterOperator));
                 case CROSS_PRODUCT -> executeQuery(beforeOperator).crossWith(executeQuery(afterOperator));
-                default -> throw new IllegalArgumentException("An unsupported operator was used in \"" + query + "\". But also likely developer was dumb.");
             };
         }
 
@@ -77,7 +104,7 @@ public class Main{
                 INTERSECT) || tableName.contains(JOIN) || tableName.contains(SELECT) || tableName.contains(PROJECT) || tableName.contains(CROSS_PRODUCT)){
             throw new DataFormatException(
                     "The string parsing algorithm was done incorrectly. Please try a simpler query so that the developer does not lose points on this very hard project. Thanks much. The algorithm thinks the table name is " + "\"" + tableName +
-                    "\"");
+                    "\".");
         }
 
         File tableFile = new File(tableName + ".txt");

@@ -322,7 +322,7 @@ public class DataTable{
     public static int[] getIndicesInArrayOfItemsEquivalentTo(final String[] array, final String[] itemsToFind){
         int[] columnIndices = new int[itemsToFind.length];
         for(int i = 0; i < itemsToFind.length; i++){
-            columnIndices[i] = getIndexInArrayOfItemEquivalentTo(array, itemsToFind[i]);
+            columnIndices[i] = getIndexInArrayOfItemEquivalentTo(array, itemsToFind[i].trim());
         }
 
         return columnIndices;
@@ -347,7 +347,7 @@ public class DataTable{
             return foundIndex;
         }
         else{
-            throw new NoSuchElementException("The item was not found in the array.");
+            throw new NoSuchElementException("The item " + itemToFind + " was not found in the array " + Arrays.toString(array) + ".");
         }
     }
 
