@@ -40,6 +40,7 @@ public class Main{
      * @return A DataTable with the query executed on just the portion passed in as a parameter, which will only occur when there is only one word (being the table name).
      * @throws DataFormatException
      */
+    @SuppressWarnings("DuplicateExpressions")
     public static DataTable executeQuery(String query) throws DataFormatException, FileNotFoundException{
         query = query.trim();
         if(query.isBlank()){
@@ -49,9 +50,9 @@ public class Main{
         //noinspection SwitchStatementWithoutDefaultBranch
         switch(query.substring(0, 4)){
             case SELECT:
-                return executeQuery(getItemInsideOuterParentheses(query.substring(query.indexOf("(")))).selectWhere(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"))));
+                return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf("}") + 1))).selectWhere(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)));
             case PROJECT:
-                return executeQuery(getItemInsideOuterParentheses(query.substring(query.indexOf("(")))).project(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"))).split(","));
+                return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf(query.lastIndexOf("}") + 1)))).project(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)).split(","));
         }
 
         int firstOperator = Math.min(Math.min(Math.min(Math.min(query.indexOf(MINUS), query.indexOf(UNION)), query.indexOf(INTERSECT)), query.indexOf(JOIN)), query.indexOf(CROSS_PRODUCT)); // This is atrocious
@@ -74,7 +75,9 @@ public class Main{
         String tableName = getItemInsideOuterParentheses(query);
         if(tableName.contains(")") || tableName.contains(DataTable.EQUALS) || tableName.contains(DataTable.LESS_THAN) || tableName.contains(DataTable.GREATER_THAN) || tableName.contains(MINUS) || tableName.contains(UNION) || tableName.contains(
                 INTERSECT) || tableName.contains(JOIN) || tableName.contains(SELECT) || tableName.contains(PROJECT) || tableName.contains(CROSS_PRODUCT)){
-            throw new DataFormatException("The string parsing algorithm was done incorrectly. Please try a simpler query so that the developer does not lose points on this very hard project. Thanks much. The algorithm thinks the table name is " + "\"" + tableName +                    "\"");
+            throw new DataFormatException(
+                    "The string parsing algorithm was done incorrectly. Please try a simpler query so that the developer does not lose points on this very hard project. Thanks much. The algorithm thinks the table name is " + "\"" + tableName +
+                    "\"");
         }
 
         File tableFile = new File(tableName + ".txt");
@@ -85,7 +88,8 @@ public class Main{
         return new DataTable(tableFile);
     }
 
-    public static String getItemInsideOuterParentheses(final String query){
+    public static String getItemInsideOuterParentheses(String query){
+        query = query.trim();
         if(query.charAt(0) != '('){
 //            throw new IllegalArgumentException("This query does not start with a parenthesis.");
             return query;
@@ -101,7 +105,7 @@ public class Main{
             }
 
             if(parenthesisOffset == 0){
-                return getItemInsideOuterParentheses(query.substring(0, i));
+                return getItemInsideOuterParentheses(query.substring(1, i));
             }
         }
 
@@ -113,7 +117,8 @@ public class Main{
         }
     }
 
-    public static String getItemInsideOuterCurlyBraces(final String query){
+    public static String getItemInsideOuterCurlyBraces(String query){
+        query = query.trim();
         if(query.charAt(0) != '{'){
 //            throw new IllegalArgumentException("This query does not start with a curly brace.");
             return query;
@@ -129,7 +134,7 @@ public class Main{
             }
 
             if(parenthesisOffset == 0){
-                return getItemInsideOuterCurlyBraces(query.substring(0, i));
+                return getItemInsideOuterCurlyBraces(query.substring(1, i));
             }
         }
 
