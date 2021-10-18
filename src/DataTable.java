@@ -255,9 +255,6 @@ public class DataTable{
         int[][] matchingIndices = listOfMatchingIndices.toArray(new int[0][]);
         ArrayList<String[]> newData = new ArrayList<>(Math.max(this.data.size(), otherTable.data.size()));
 
-        int thisTableNumberOfUniqueColumns = this.columnNames.length - sharedColumnNames.length;
-        int otherTableNumberOfUniqueColumns = otherTable.columnNames.length - sharedColumnNames.length;
-
         for(int i = 0; i < matchingIndices.length; i++){
             newData.add(new String[newColumnNames.length]);
 
