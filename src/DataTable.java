@@ -1,6 +1,3 @@
-import com.sun.source.tree.LambdaExpressionTree;
-
-import javax.management.monitor.StringMonitor;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.lang.module.FindException;
@@ -8,17 +5,18 @@ import java.util.*;
 import java.util.zip.DataFormatException;
 
 public class DataTable{
-    public static final String EQUALS = "=";
-    public static final String LESS_THAN = "<";
-    public static final String GREATER_THAN = ">";
-    private final List<String[]> data = new ArrayList<>(100);
-    private final String[]       columnNames;
+    public static final String         EQUALS       = "=";
+    public static final String         LESS_THAN    = "<";
+    public static final String         GREATER_THAN = ">";
+    private final       List<String[]> data         = new ArrayList<>(100);
+    private final       String[]       columnNames;
 
     public DataTable(final File file) throws FileNotFoundException, DataFormatException{
         try(Scanner scanner = new Scanner(file)){
             if(scanner.hasNextLine()){
                 this.columnNames = scanner.nextLine().split(",\\s*");
-            }else{
+            }
+            else{
                 throw new DataFormatException("This file has no data.");
             }
 
@@ -51,12 +49,112 @@ public class DataTable{
     }
 
     /**
+     * Cross product is creating a row for every possible combination of rows between this table and the otherTable.
+     * So there will be # of rows in this table times # of rows in the otherTable = resultant # of rows.
+     * @param otherTable The table to be crossed in your heart and hope to die with.
+     * @return A massive, enormous, humungous, elephantine, gigantic, huge, large, great, big, ginormous, massive, mammoth, voluminous, gargantuan, tremendous, monstrous, giant, hulking, immense, colossal table
+     * that is the cross product between this table and the otherTable.
+     */
+    public DataTable crossWith(final DataTable otherTable){
+        ArrayList<String[]> newData = new ArrayList<>(this.data.size() * otherTable.data.size());
+
+        for(int i = 0; i < this.data.size(); i++){
+            newData.add(new String[this.columnNames.length + otherTable.columnNames.length]);
+            for(int j = 0; j < otherTable.data.size(); j++){
+                int newArrayIndex = 0;
+                for(int u = 0; u < this.columnNames.length; u++, newArrayIndex++){
+                    newData.get(i)[newArrayIndex] = this.data.get(i)[u];
+                }
+                for(int u = 0; u < otherTable.columnNames.length; u++, newArrayIndex++){
+                    newData.get(i)[newArrayIndex] = otherTable.data.get(j)[u];
+                }
+            }
+        }
+
+        ArrayList<String> newColumnNames = new ArrayList<>(this.columnNames.length + otherTable.columnNames.length);
+        newColumnNames.addAll(Arrays.asList(this.columnNames));
+        newColumnNames.addAll(Arrays.asList(otherTable.columnNames));
+
+        return new DataTable(newColumnNames.toArray(new String[0]), newData);
+    }
+
+    /**
+     * Performs an intersection between this table and the otherTable. This is essentially the opposite of the MINUS operator.
+     * Basically, it only keeps rows that exist in both tables (all field values must be identical).
+     * @param otherTable The table to make babies with.
+     * @return An intersected table with only the common rows between this table and the otherTable.
+     */
+    public DataTable intersectWith(final DataTable otherTable){
+        if(this.columnNames.length != otherTable.columnNames.length){
+            throw new IllegalArgumentException("Cannot intersect tables with different number of columns");
+        }
+        if(getCommonElementsInArrays(this.columnNames, otherTable.columnNames).length != this.columnNames.length){
+            throw new IllegalArgumentException("Cannot intersect tables if all columns don't match exactly.");
+        }
+
+        ArrayList<String[]> newData = new ArrayList<>(this.data.size());
+
+        for(String[] datum : this.data){
+            if(this.thereExistsAnEquivalentRowIn(otherTable)){
+                newData.add(datum);
+            }
+        }
+
+        return new DataTable(this.columnNames, newData);
+    }
+
+    /**
+     * The UNION operator simply combines the rows of data of this table and otherTable.
+     * That's why, when the union's been on strike, you're down on your luck, it's tough (so tough).
+     * @param otherTable The table to append to this one.
+     * @return A table with all the rows from this table and the otherTable.
+     */
+    public DataTable unionWith(final DataTable otherTable){
+//        this.data.addAll(otherTable.data);
+//        return this;
+
+        ArrayList<String[]> newData = new ArrayList<>(this.data.size() + otherTable.data.size());
+
+        newData.addAll(this.data);
+        newData.addAll(otherTable.data);
+
+        return new DataTable(this.columnNames, newData);
+    }
+
+    /**
+     * Performs the SET DIFFERENCE operator. Basically if any row in this table is equivalent (all field values are equal) to the rows in the otherTable,
+     * then they will not be present in the new table after the operation is complete. Only keeps the rows in this table that are not
+     * present in the otherTable. This is the best I can explain it, if you don't understand it, boo on you.
+     * @param otherTable The table to subtract from this one.
+     * @return A new table with the rows in the otherTable subtracted from this table.
+     */
+    public DataTable minus(final DataTable otherTable){
+        if(this.columnNames.length != otherTable.columnNames.length){
+            throw new IllegalArgumentException("Cannot subtract tables with different number of columns");
+        }
+        if(getCommonElementsInArrays(this.columnNames, otherTable.columnNames).length != this.columnNames.length){
+            throw new IllegalArgumentException("Cannot subtract tables if all columns don't match exactly.");
+        }
+
+        ArrayList<String[]> newData = new ArrayList<>(this.data.size());
+
+        for(String[] datum : this.data){
+            if(!this.thereExistsAnEquivalentRowIn(otherTable)){
+                newData.add(datum);
+            }
+        }
+
+        return new DataTable(this.columnNames, newData);
+    }
+
+    /**
      * Runs a PROJECT operator on the current DataTable and projects the columns specified.
      * Automatically trims the leading and trailing whitespace from the column names passed in.
+     *
      * @param columns An array of all the column names. Leading and trailing whitespace in each element is trimmed.
      * @return A new DataTable with just the specified columns.
      */
-    public DataTable project(String[] columns){
+    public DataTable project(final String[] columns){
         int[] columnIndices = getIndicesInArrayOfItemsEquivalentTo(this.columnNames, columns);
 
         ArrayList<String[]> newData = new ArrayList<>(this.data.size());
@@ -67,30 +165,33 @@ public class DataTable{
             }
         }
 
-        return new DataTable(columns,  newData);
+        return new DataTable(columns, newData);
     }
 
     /**
      * @param whereClause Single condition as String, supporting >, <, and =.
      * @return A new DataTable with a WHERE clause applied to the current one.
      */
-    public DataTable selectWhere(String whereClause){
+    public DataTable selectWhere(final String whereClause){
         char numberOfOperators = 0;
         String operator = "";
         if(whereClause.contains(GREATER_THAN)){
             numberOfOperators++;
             operator = GREATER_THAN;
-        }if(whereClause.contains(LESS_THAN)){
+        }
+        if(whereClause.contains(LESS_THAN)){
             numberOfOperators++;
             operator = LESS_THAN;
-        }if(whereClause.contains(EQUALS)){
+        }
+        if(whereClause.contains(EQUALS)){
             numberOfOperators++;
             operator = EQUALS;
         }
 
         if(numberOfOperators > 1){
             throw new IllegalArgumentException("This WHERE clause is malformed. More than one operator was detected.");
-        }else if(numberOfOperators < 1){
+        }
+        else if(numberOfOperators < 1){
             throw new IllegalArgumentException("This WHERE clause has no valid comparison operator. Use '>', '<', or '='.");
         }
 
@@ -125,12 +226,11 @@ public class DataTable{
     }
 
     /**
-     *
      * @param otherTable The table to join with.
      * @return A new DataTable that does a full natural join on this table and the otherTable.
      * @throws DataFormatException if weird shit goes down.
      */
-    public DataTable joinWith(DataTable otherTable) throws DataFormatException{
+    public DataTable joinWith(final DataTable otherTable) throws DataFormatException{
         String[] sharedColumnNames = getCommonElementsInArrays(this.columnNames, otherTable.columnNames);
         String[] newColumnNames = getCombinedArrayWithoutDuplicates(this.columnNames, otherTable.columnNames);
 
@@ -186,8 +286,27 @@ public class DataTable{
         return new DataTable(newColumnNames, newData);
     }
 
-    public static boolean areSpecificElementsEqualInArrays(String[] array1, int[] array1Indices, String[] array2, int[] array2Indices){
+    public boolean thereExistsAnEquivalentRowIn(final DataTable otherTable){
+        for(int i = 0; i < otherTable.data.size(); i++){
+            boolean isRowEquivalent = true;
+            for(int j = 0; j < this.columnNames.length; j++){
+                if(!this.data.get(i)[j].equals(otherTable.data.get(i)[j])){
+                    isRowEquivalent = false;
+                    break;
+                }
+            }
+
+            if(isRowEquivalent){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean areSpecificElementsEqualInArrays(final String[] array1, final int[] array1Indices, final String[] array2, final int[] array2Indices){
         if(array1Indices.length != array2Indices.length){
+            //noinspection GrazieInspection
             throw new IllegalArgumentException("array1Indices and array2Indices must be the same length arrays. Duh.");
         }
 
@@ -200,7 +319,7 @@ public class DataTable{
         return true;
     }
 
-    public static int[] getIndicesInArrayOfItemsEquivalentTo(String[] array, String[] itemsToFind){
+    public static int[] getIndicesInArrayOfItemsEquivalentTo(final String[] array, final String[] itemsToFind){
         int[] columnIndices = new int[itemsToFind.length];
         for(int i = 0; i < itemsToFind.length; i++){
             columnIndices[i] = getIndexInArrayOfItemEquivalentTo(array, itemsToFind[i]);
@@ -209,7 +328,7 @@ public class DataTable{
         return columnIndices;
     }
 
-    public static int getIndexInArrayOfItemEquivalentTo(String[] array, String itemToFind){
+    public static int getIndexInArrayOfItemEquivalentTo(final String[] array, final String itemToFind){
         boolean itemFound = false;
         int foundIndex = -1;
         for(int i = 0; i < array.length; i++){
@@ -232,7 +351,7 @@ public class DataTable{
         }
     }
 
-    public static String[] getCombinedArrayWithoutDuplicates(String[] array1, String[] array2){
+    public static String[] getCombinedArrayWithoutDuplicates(final String[] array1, final String[] array2){
         ArrayList<String> combinedArray = new ArrayList<>(array1.length + array2.length);
 
         combinedArray.addAll(Arrays.asList(array1));
@@ -246,7 +365,7 @@ public class DataTable{
         return combinedArray.toArray(new String[0]);
     }
 
-    public static String[] getCommonElementsInArrays(String[] array1, String[] array2){
+    public static String[] getCommonElementsInArrays(final String[] array1, final String[] array2){
         ArrayList<String> commonArray = new ArrayList<>(Math.min(array1.length, array2.length));
 
         for(String element : array1){
@@ -258,7 +377,7 @@ public class DataTable{
         return commonArray.toArray(new String[0]);
     }
 
-    public static <T> boolean containsItemEquivalentTo(T[] array, Object item){
+    public static <T> boolean containsItemEquivalentTo(final T[] array, final Object item){
         for(final T currentItem : array){
             if(currentItem.equals(item)){
                 return true;
@@ -268,7 +387,7 @@ public class DataTable{
         return false;
     }
 
-    public static boolean containsItemEquivalentTo(int[] array, int item){
+    public static boolean containsItemEquivalentTo(final int[] array, final int item){
         for(final int currentItem : array){
             if(currentItem == item){
                 return true;
