@@ -51,6 +51,7 @@ public class DataTable{
     /**
      * Cross product is creating a row for every possible combination of rows between this table and the otherTable.
      * So there will be # of rows in this table times # of rows in the otherTable = resultant # of rows.
+     *
      * @param otherTable The table to be crossed in your heart and hope to die with.
      * @return A massive, enormous, humungous, elephantine, gigantic, huge, large, great, big, ginormous, massive, mammoth, voluminous, gargantuan, tremendous, monstrous, giant, hulking, immense, colossal table
      * that is the cross product between this table and the otherTable.
@@ -81,6 +82,7 @@ public class DataTable{
     /**
      * Performs an intersection between this table and the otherTable. This is essentially the opposite of the MINUS operator.
      * Basically, it only keeps rows that exist in both tables (all field values must be identical).
+     *
      * @param otherTable The table to make babies with.
      * @return An intersected table with only the common rows between this table and the otherTable.
      */
@@ -106,6 +108,7 @@ public class DataTable{
     /**
      * The UNION operator simply combines the rows of data of this table and otherTable.
      * That's why, when the union's been on strike, you're down on your luck, it's tough (so tough).
+     *
      * @param otherTable The table to append to this one.
      * @return A table with all the rows from this table and the otherTable.
      */
@@ -125,6 +128,7 @@ public class DataTable{
      * Performs the SET DIFFERENCE operator. Basically if any row in this table is equivalent (all field values are equal) to the rows in the otherTable,
      * then they will not be present in the new table after the operation is complete. Only keeps the rows in this table that are not
      * present in the otherTable. This is the best I can explain it, if you don't understand it, boo on you.
+     *
      * @param otherTable The table to subtract from this one.
      * @return A new table with the rows in the otherTable subtracted from this table.
      */
@@ -251,12 +255,14 @@ public class DataTable{
         int[][] matchingIndices = listOfMatchingIndices.toArray(new int[0][]);
         ArrayList<String[]> newData = new ArrayList<>(Math.max(this.data.size(), otherTable.data.size()));
 
-        int thisTableNumberOfUniqueColumns = this.columnNames.length - sharedColumnNames.length, otherTableNumberOfUniqueColumns = otherTable.columnNames.length - sharedColumnNames.length;
+        int thisTableNumberOfUniqueColumns = this.columnNames.length - sharedColumnNames.length;
+        int otherTableNumberOfUniqueColumns = otherTable.columnNames.length - sharedColumnNames.length;
+
         for(int i = 0; i < matchingIndices.length; i++){
             newData.add(new String[newColumnNames.length]);
 
             int newRowColumnIndex = 0;
-            for(int j = 0; j < thisTableNumberOfUniqueColumns; j++){ // Add items from first table (except shared columns)
+            for(int j = 0; j < this.columnNames.length; j++){ // Add items from first table (except shared columns)
                 if(!containsItemEquivalentTo(thisTableSharedColumnIndices, j)){
                     newData.get(i)[newRowColumnIndex] = this.data.get(matchingIndices[i][0])[j];
                     newRowColumnIndex++;
@@ -271,14 +277,14 @@ public class DataTable{
                 newRowColumnIndex++;
             }
 
-            for(int j = 0; j < otherTableNumberOfUniqueColumns; j++){ // Add third table unique items
+            for(int j = 0; j < otherTable.columnNames.length; j++){ // Add third table unique items
                 if(!containsItemEquivalentTo(otherTableSharedColumnIndices, j)){
                     newData.get(i)[newRowColumnIndex] = otherTable.data.get(matchingIndices[i][1])[j];
                     newRowColumnIndex++;
                 }
             }
 
-            if(newRowColumnIndex != (newColumnNames.length - 1)){
+            if(newRowColumnIndex != (newColumnNames.length)){
                 throw new DataFormatException("We obviously added the wrong number of fields to this row. We done goofed.");
             }
         }
@@ -395,5 +401,90 @@ public class DataTable{
         }
 
         return false;
+    }
+
+    @Override
+    public String toString(){
+        int[] longestWordInColumn = new int[this.columnNames.length];
+
+        for(int i = 0; i < this.columnNames.length; i++){
+            if(i != (this.columnNames.length - 1)){
+                if(this.columnNames[i].length() > longestWordInColumn[i]){
+                    longestWordInColumn[i] = this.columnNames[i].length();
+                }
+            }
+        }
+
+        for(String[] datum : this.data){
+            for(int j = 0; j < this.columnNames.length; j++){
+                if(j != (this.columnNames.length - 1)){
+                    if(datum[j].length() > longestWordInColumn[j]){
+                        longestWordInColumn[j] = datum[j].length();
+                    }
+                }
+            }
+        }
+
+
+        String resultingString = "";
+
+        for(int i = 0; i < this.columnNames.length; i++){
+            resultingString += this.columnNames[i] + repeatedString(" ", longestWordInColumn[i] - this.columnNames[i].length());
+            if(i != (this.columnNames.length - 1)){
+                resultingString += "\t";
+            }
+        }
+
+        for(String[] datum : this.data){
+            resultingString += System.lineSeparator();
+            for(int j = 0; j < this.columnNames.length; j++){
+                if(datum[j] == null){
+                    continue;
+                }
+
+                resultingString += datum[j] + repeatedString(" ", longestWordInColumn[j] - datum[j].length());
+                if(j != (this.columnNames.length - 1)){
+                    resultingString += "\t";
+                }
+            }
+        }
+
+        return resultingString;
+    }
+
+    public String toCSV(){
+        String resultingString = "";
+
+        for(int i = 0; i < this.columnNames.length; i++){
+            resultingString += this.columnNames[i];
+            if(i != (this.columnNames.length - 1)){
+                resultingString += ",";
+            }
+        }
+
+        for(String[] datum : this.data){
+            resultingString += System.lineSeparator();
+            for(int j = 0; j < this.columnNames.length; j++){
+                if(datum[j] == null){
+                    continue;
+                }
+
+                resultingString += datum[j];
+                if(j != (this.columnNames.length - 1)){
+                    resultingString += ",";
+                }
+            }
+        }
+
+        return resultingString;
+    }
+
+    public static String repeatedString(String stringToAdd, int numberOfTimes){
+        String theString = "";
+        for(int i = 0; i < numberOfTimes; i++){
+            theString += stringToAdd;
+        }
+
+        return theString;
     }
 }

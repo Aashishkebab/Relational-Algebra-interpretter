@@ -1,5 +1,7 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Objects;
 import java.util.Scanner;
 import java.util.zip.DataFormatException;
@@ -13,16 +15,29 @@ public class Main{
     public static final String PROJECT       = "PROJ";
     public static final String CROSS_PRODUCT = "X";
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws FileNotFoundException{
         File queriesFile = new File("RAqueries.txt");
         if(!queriesFile.exists()){
             System.out.println("The RAQueries.txt file was not found.");
             return;
         }
 
+        File outputFile = new File("RAoutput.csv");
+        PrintWriter writer = new PrintWriter(outputFile);
+        writer.print("");
+
         try(Scanner queriesScanner = new Scanner(queriesFile)){
-            while(queriesScanner.hasNextLine()){
-                System.out.println(executeQuery(queriesScanner.nextLine()).toString());
+            try(Scanner inputScanner = new Scanner(System.in)){
+                while(queriesScanner.hasNextLine()){
+                    DataTable result = executeQuery(queriesScanner.nextLine());
+                    System.out.println(result.toString());
+                    System.out.println();
+
+                    writer.write(result.toCSV() + System.lineSeparator());
+                }
+            }
+            catch(IOException e){
+                e.printStackTrace();
             }
         }
         catch(FileNotFoundException exception){
@@ -31,10 +46,12 @@ public class Main{
         catch(DataFormatException | IllegalArgumentException exception){
             System.out.println(exception.getMessage());
         }
+
+        writer.close();
     }
 
     /**
-     * This method is very recursive. It accounts for any number of parentheses and curly braces, and intelligently ignores whitespace.
+     * This method is very recursive. It accounts for any number of parentheses, and intelligently ignores whitespace.
      *
      * @param query The query to run as a single line.
      * @return A DataTable with the query executed on just the portion passed in as a parameter, which will only occur when there is only one word (being the table name).
@@ -42,10 +59,12 @@ public class Main{
      */
     @SuppressWarnings({"DuplicateExpressions", "DuplicatedCode"})
     public static DataTable executeQuery(String query) throws DataFormatException, FileNotFoundException{
-        query = query.trim();
         if(query.isBlank()){
             throw new IllegalArgumentException("The query cannot be blank.");
         }
+
+        query = getItemInsideOuterParentheses(query.trim());
+
         String firstLetter = query.substring(0, 1);
         if(firstLetter.equals(MINUS) || firstLetter.equals(UNION) || firstLetter.equals(JOIN) || firstLetter.equals(CROSS_PRODUCT)){
             //noinspection GrazieInspection
@@ -55,9 +74,9 @@ public class Main{
         //noinspection SwitchStatementWithoutDefaultBranch
         switch(query.substring(0, 4)){
             case SELECT:
-                return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf("}") + 1))).selectWhere(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)));
+                return executeQuery(getItemInsideOuterParentheses(query.substring(query.indexOf("}") + 1))).selectWhere(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.indexOf("}") + 1)));
             case PROJECT:
-                return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf("}") + 1))).project(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)).split(","));
+                return executeQuery(getItemInsideOuterParentheses(query.substring(query.indexOf("}") + 1))).project(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.indexOf("}") + 1)).split(","));
         }
 
         int firstOperator = Integer.MAX_VALUE;
