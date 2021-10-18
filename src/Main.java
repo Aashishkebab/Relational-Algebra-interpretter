@@ -60,7 +60,7 @@ public class Main{
                 return executeQuery(getItemInsideOuterParentheses(query.substring(query.lastIndexOf("}") + 1))).project(getItemInsideOuterCurlyBraces(query.substring(query.indexOf("{"), query.lastIndexOf("}") + 1)).split(","));
         }
 
-        int firstOperator = -1;
+        int firstOperator = Integer.MAX_VALUE;
         String firstOperatorName = null;
 
         if(query.contains(MINUS)){
@@ -95,6 +95,7 @@ public class Main{
                 case JOIN -> executeQuery(beforeOperator).joinWith(executeQuery(afterOperator));
                 case INTERSECT -> executeQuery(beforeOperator).intersectWith(executeQuery(afterOperator));
                 case CROSS_PRODUCT -> executeQuery(beforeOperator).crossWith(executeQuery(afterOperator));
+                default -> throw new UnsupportedOperationException("IDK man, the compiler forced me to put this in here.");
             };
         }
 

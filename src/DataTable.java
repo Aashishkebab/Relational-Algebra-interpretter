@@ -234,7 +234,7 @@ public class DataTable{
         String[] sharedColumnNames = getCommonElementsInArrays(this.columnNames, otherTable.columnNames);
         String[] newColumnNames = getCombinedArrayWithoutDuplicates(this.columnNames, otherTable.columnNames);
 
-        int[] table1TableSharedColumnIndices = getIndicesInArrayOfItemsEquivalentTo(this.columnNames, sharedColumnNames);
+        int[] thisTableSharedColumnIndices = getIndicesInArrayOfItemsEquivalentTo(this.columnNames, sharedColumnNames);
         int[] otherTableSharedColumnIndices = getIndicesInArrayOfItemsEquivalentTo(otherTable.columnNames, sharedColumnNames);
 
         int maxNumberOfMatchingRows = Math.min(this.data.size(), otherTable.data.size());
@@ -242,7 +242,7 @@ public class DataTable{
 
         for(int i = 0; i < this.data.size(); i++){
             for(int j = 0; j < otherTable.data.size(); j++){
-                if(areSpecificElementsEqualInArrays(this.data.get(i), table1TableSharedColumnIndices, otherTable.data.get(i), otherTableSharedColumnIndices)){
+                if(areSpecificElementsEqualInArrays(this.data.get(i), thisTableSharedColumnIndices, otherTable.data.get(j), otherTableSharedColumnIndices)){
                     listOfMatchingIndices.add(new int[]{i, j});
                 }
             }
@@ -251,29 +251,29 @@ public class DataTable{
         int[][] matchingIndices = listOfMatchingIndices.toArray(new int[0][]);
         ArrayList<String[]> newData = new ArrayList<>(Math.max(this.data.size(), otherTable.data.size()));
 
-        int table1TableNumberOfUniqueColumns = this.columnNames.length - sharedColumnNames.length, otherTableNumberOfUniqueColumns = otherTable.columnNames.length - sharedColumnNames.length;
+        int thisTableNumberOfUniqueColumns = this.columnNames.length - sharedColumnNames.length, otherTableNumberOfUniqueColumns = otherTable.columnNames.length - sharedColumnNames.length;
         for(int i = 0; i < matchingIndices.length; i++){
             newData.add(new String[newColumnNames.length]);
 
             int newRowColumnIndex = 0;
-            for(int j = 0; j < table1TableNumberOfUniqueColumns; j++){ // Add items from first table (except shared columns)
-                if(!containsItemEquivalentTo(table1TableSharedColumnIndices, j)){
+            for(int j = 0; j < thisTableNumberOfUniqueColumns; j++){ // Add items from first table (except shared columns)
+                if(!containsItemEquivalentTo(thisTableSharedColumnIndices, j)){
                     newData.get(i)[newRowColumnIndex] = this.data.get(matchingIndices[i][0])[j];
                     newRowColumnIndex++;
                 }
             }
-            for(int j = 0; j < table1TableSharedColumnIndices.length; j++){ // Add shared items
-                if(!this.data.get(i)[table1TableSharedColumnIndices[j]].equals(otherTable.data.get(i)[otherTableSharedColumnIndices[j]])){
+            for(int j = 0; j < thisTableSharedColumnIndices.length; j++){ // Add shared items
+                if(!this.data.get(matchingIndices[i][0])[thisTableSharedColumnIndices[j]].equals(otherTable.data.get(matchingIndices[i][1])[otherTableSharedColumnIndices[j]])){
                     throw new DataFormatException("Developer is an idiot, as fields that were indicated as matching for merging are clearly not matching.");
                 }
 
-                newData.get(i)[newRowColumnIndex] = this.data.get(i)[table1TableSharedColumnIndices[j]];
+                newData.get(i)[newRowColumnIndex] = this.data.get(matchingIndices[i][0])[thisTableSharedColumnIndices[j]];
                 newRowColumnIndex++;
             }
 
             for(int j = 0; j < otherTableNumberOfUniqueColumns; j++){ // Add third table unique items
                 if(!containsItemEquivalentTo(otherTableSharedColumnIndices, j)){
-                    newData.get(i)[newRowColumnIndex] = this.data.get(matchingIndices[i][1])[j];
+                    newData.get(i)[newRowColumnIndex] = otherTable.data.get(matchingIndices[i][1])[j];
                     newRowColumnIndex++;
                 }
             }
